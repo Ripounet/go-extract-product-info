@@ -24,6 +24,7 @@ type Apart struct {
 }
 
 func init() {
+	http.HandleFunc("/proxy", serveDistant)
 	http.HandleFunc("/rest/apart", apartRouter)
 }
 
