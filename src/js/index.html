@@ -1,0 +1,114 @@
+<html>
+<head>
+ <title>Basic HTML data extractor</title>
+ <link rel="stylesheet" href="/js/index.css" />
+</head>
+<body>
+<div>
+ <h1>HTML page fetch and mine</h1>
+ <input type="text" name="targetURL" id="targetURL" placeholder="Paste URL here" value="http://www.etronics.com/coby-cve56blu-jammerz-moods-colorful-isolation-stereo-earphones-blue.html" />
+ <button id="launch">Get and extract</button>
+ <button id="extract" disabled="disabled">Extract again</button>
+</div>
+
+<div id="process">
+	<pre id="result"></pre>
+ 	<button id="downloadResult" disabled="disabled">Download result file</button>
+</div>
+
+<div>
+ <iframe id="sandboxIframe"></iframe>
+</div>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script>
+$(function($){
+
+	 
+ function extract(){
+	 $("#result").empty();
+	 var page = $("#sandboxIframe").contents();
+	 
+	 // 1) Title of the product
+	 var element1 = page.find(".product-name h1");
+	 var item1 = element1.html();
+	 $("#result").append("Title: " + item1 + "\n");
+	 highlight(element1);
+
+	 // 2) Price of the product 
+	 var element2 = page.find(".product-shop .price");
+	 var item2 = element2.html();
+	 $("#result").append("Price: " + item2 + "\n");
+	 highlight(element2);
+	 
+	 // 3) The brand
+	 // Although there is no distinct field "brand" in the page,
+	 // we can observe that the title always begins with what looks
+	 // like the Brand
+	 var title = item1;
+	 var words = title.split(" ");
+	 var item3 = words[0];
+	 $("#result").append("Brand: " + item3 + "\n");
+	 
+	 // 4) The manufacturers and the Etronics part numbers 
+	 var element41 = page.find("#product-attribute-specs-table>tbody>tr>th:contains(Manufacturer)").next();
+	 var item41 = element41.html();
+	 $("#result").append("Manufacturer: " + item41 + "\n");
+	 highlight(element41);
+	 var element42 = page.find("#product-attribute-specs-table>tbody>tr>th:contains(Model Number)").next();
+	 var item42 = element42.html();
+	 $("#result").append("Number: " + item42 + "\n");
+	 highlight(element42);
+	 
+	 // 5) Short description
+	 var element5 = page.find('.short-description .std');
+	 var item5 = element5.html();
+	 $("#result").append("Short description: " + item5 + "\n");
+	 highlight(element5);
+
+	 
+	 // 6) The category structure
+	 var elements6 = page.find(".breadcrumbs li").filter(function() {return this.className.match(/category/);}).find("a");
+	 var items6 = $.map(elements6, function(el){return el.text;}).join(",");
+	 $("#result").append("Categories: " + items6 + "\n");
+	 highlight(elements6);
+
+	 $("#extract").removeAttr("disabled");
+	 $("#downloadResult").removeAttr("disabled");
+ }
+	 
+ $("#launch").click(function(){
+   var targetURL = $("#targetURL").val();
+   $("#peek").attr("src", targetURL);
+
+   
+   $.get("/proxy", {url:targetURL}, function(response){
+	   // Put the downloaded bytes into iFrame as its new content
+		$("#sandboxIframe").get()[0].contentWindow.document.open();
+		$("#sandboxIframe").get()[0].contentWindow.document.close();
+		$("#sandboxIframe").get()[0].contentWindow.document.write(response);
+		
+		setTimeout(extract, 1000);
+   });
+ });
+ 
+
+ $("#extract").click(function(){
+	 extract();
+ });
+ 
+ function highlight(element){
+	 if(element){
+	 	element.css({border:"4px dashed red"}); 
+	 }
+ }
+ 
+ $("#downloadResult").click(function(){
+	 var data = $("#result").html();
+	 location.href = "data:text," + encodeURIComponent(data);
+ });
+
+}(jQuery));
+</script>
+</body>
+</html>

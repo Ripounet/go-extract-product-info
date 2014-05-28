@@ -13,6 +13,9 @@ handlers:
 - url: /js
   static_files: js/index.html
   upload: js/index.html
+- url: /js/index.css
+  static_files: js/index.css
+  upload: js/index.css
 - url: /go
   static_files: go/index.html
   upload: go/index.html
