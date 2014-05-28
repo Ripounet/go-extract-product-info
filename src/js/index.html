@@ -25,7 +25,6 @@
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 <script>
 $(function($){
-
 	 
  function extract(){
 	 $("#result").empty();
@@ -81,7 +80,6 @@ $(function($){
  $("#launch").click(function(){
    var targetURL = $("#targetURL").val();
    $("#peek").attr("src", targetURL);
-
    
    $.get("/proxy", {url:targetURL}, function(response){
 	   // Put the downloaded bytes into iFrame as its new content
@@ -92,7 +90,6 @@ $(function($){
 		setTimeout(extract, 1000);
    });
  });
- 
 
  $("#extract").click(function(){
 	 extract();
@@ -104,6 +101,7 @@ $(function($){
 	 }
  }
  
+// Strips html tags, and return trimmed one-line text.
 function flat(s){
 	if(s){
 		return $.trim( $("<div/>").html(s).text().replace("\n", " ") );

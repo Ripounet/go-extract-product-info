@@ -9,18 +9,15 @@ import (
 	"fmt"
 )
 
-type Apart struct {
-	Reserved []byte `json:",string"`
-	Data     []byte `json:",string"`
-	UnitId   string
-	Name     string
-}
-
 func init() {
 	http.HandleFunc("/proxy", serveDistant)
 	http.HandleFunc("/go/extract", process)
 }
 
+//
+// Use the GoQuery selectors to access data in the DOM
+// Return raw text key: value pairs in a string.
+//
 func extractFrom(doc *goquery.Document) string {
 	result := ""
 
@@ -57,7 +54,7 @@ func extractFrom(doc *goquery.Document) string {
 	cats := []string{}
 	breadcrumb: for _, li := range item6.Nodes{
 		for _, attr := range li.Attr {
-			if attr.Key=="class" && !strings.Contains(attr.Val, "ategor") {
+			if attr.Key=="class" && !strings.Contains(attr.Val, "category") {
 				continue breadcrumb
 			}
 		}
@@ -74,6 +71,12 @@ func extractFrom(doc *goquery.Document) string {
 	return result
 }
 
+//
+// Take target URL as GET parameter.
+// Make a GET request to that URL to fetch the HTML document.
+// Use GoQuery to parse it into a DOM Document object.
+// Call the extraction function.
+// Write the result into the HTTP response stream.
 func process(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
