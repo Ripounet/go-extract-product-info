@@ -1,16 +1,16 @@
 package extract
 
 import (
-	"net/http"
 	"appengine"
 	"appengine/urlfetch"
 	"io/ioutil"
+	"net/http"
 )
 
 //
 // Just forward the response from another site, to the user.
 // Used to bypass the "Access-Control-Allow-Origin" for simple non-private resources.
-// 
+//
 func serveDistant(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 
@@ -26,10 +26,10 @@ func serveDistant(w http.ResponseWriter, r *http.Request) {
 		c.Errorf("%v", err)
 		return
 	}
-	_, err = w.Write( x )
+	_, err = w.Write(x)
 	if err != nil {
 		c.Errorf("%v", err)
 		return
 	}
-	
+
 }

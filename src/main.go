@@ -3,10 +3,10 @@ package extract
 import (
 	"appengine"
 	"appengine/urlfetch"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"net/http"
 	"strings"
-	"fmt"
 )
 
 func init() {
@@ -28,7 +28,7 @@ func extractFrom(doc *goquery.Document) string {
 	// 2) Price of the product
 	item2 := doc.Find(".product-shop .price").First().Text()
 	result += "Price: " + item2 + "\n"
-	
+
 	// 3) The brand
 	// Although there is no distinct field "brand" in the page,
 	// we can observe that the title always begins with what looks
@@ -38,23 +38,24 @@ func extractFrom(doc *goquery.Document) string {
 		item3 := strings.Split(title, " ")[0]
 		result += "Brand: " + item3 + "\n"
 	}
-	
+
 	// 4) The manufacturers and the Etronics part numbers
 	item41 := doc.Find("#product-attribute-specs-table>tbody>tr>th:contains(Manufacturer)").Next().Text()
 	result += "Manufacturer: " + item41 + "\n"
 	item42 := doc.Find("#product-attribute-specs-table>tbody>tr>th:contains(Model\\ Number)").Next().Text()
 	result += "Number: " + item42 + "\n"
-	
+
 	// 5) Short description
 	item5 := doc.Find(".short-description .std").First().Text()
 	result += "Short description: " + item5 + "\n"
-	
+
 	// 6) The category structure
 	item6 := doc.Find(".breadcrumbs li")
 	cats := []string{}
-	breadcrumb: for _, li := range item6.Nodes{
+breadcrumb:
+	for _, li := range item6.Nodes {
 		for _, attr := range li.Attr {
-			if attr.Key=="class" && !strings.Contains(attr.Val, "category") {
+			if attr.Key == "class" && !strings.Contains(attr.Val, "category") {
 				continue breadcrumb
 			}
 		}
@@ -62,9 +63,9 @@ func extractFrom(doc *goquery.Document) string {
 		for child.Type != 3 && child.NextSibling != nil {
 			child = child.NextSibling
 		}
-		txt := child.FirstChild 
+		txt := child.FirstChild
 		cat := txt.Data
-		cats = append(cats, fmt.Sprintf("%v",cat) )
+		cats = append(cats, fmt.Sprintf("%v", cat))
 	}
 	result += "Categories: " + strings.Join(cats, ", ") + "\n"
 
