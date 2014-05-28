@@ -4,8 +4,10 @@
  <link rel="stylesheet" href="/js/index.css" />
 </head>
 <body>
+
+<h1>HTML page fetch and mine</h1>
+<h2>With jQuery</h2>
 <div>
- <h1>HTML page fetch and mine</h1>
  <input type="text" name="targetURL" id="targetURL" placeholder="Paste URL here" value="http://www.etronics.com/coby-cve56blu-jammerz-moods-colorful-isolation-stereo-earphones-blue.html" />
  <button id="launch">Get and extract</button>
  <button id="extract" disabled="disabled">Extract again</button>
@@ -61,11 +63,10 @@ $(function($){
 	 highlight(element42);
 	 
 	 // 5) Short description
-	 var element5 = page.find('.short-description .std');
+	 var element5 = page.find(".short-description .std");
 	 var item5 = element5.html();
 	 $("#result").append("Short description: " + item5 + "\n");
 	 highlight(element5);
-
 	 
 	 // 6) The category structure
 	 var elements6 = page.find(".breadcrumbs li").filter(function() {return this.className.match(/category/);}).find("a");

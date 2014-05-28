@@ -1,19 +1,12 @@
-package dashboard
+package extract
 
 import (
-	"fmt"
-	"net/http"
-
-	"errors"
-	"regexp"
-
-	"encoding/json"
-
 	"appengine"
-	"appengine/datastore"
 	"appengine/urlfetch"
-
 	"github.com/PuerkitoBio/goquery"
+	"net/http"
+	"strings"
+	"fmt"
 )
 
 type Apart struct {
@@ -25,113 +18,79 @@ type Apart struct {
 
 func init() {
 	http.HandleFunc("/proxy", serveDistant)
-	http.HandleFunc("/rest/apart", apartRouter)
+	http.HandleFunc("/go/extract", process)
 }
 
-func apartRouter(w http.ResponseWriter, r *http.Request) {
+func extractFrom(doc *goquery.Document) string {
+	result := ""
+
+	// 1) Title of the product
+	item1 := doc.Find(".product-name h1").First().Text()
+	result += "Title: " + item1 + "\n"
+
+	// 2) Price of the product
+	item2 := doc.Find(".product-shop .price").First().Text()
+	result += "Price: " + item2 + "\n"
+	
+	// 3) The brand
+	// Although there is no distinct field "brand" in the page,
+	// we can observe that the title always begins with what looks
+	// like the Brand
+	title := item1
+	if title != "" {
+		item3 := strings.Split(title, " ")[0]
+		result += "Brand: " + item3 + "\n"
+	}
+	
+	// 4) The manufacturers and the Etronics part numbers
+	item41 := doc.Find("#product-attribute-specs-table>tbody>tr>th:contains(Manufacturer)").Next().Text()
+	result += "Manufacturer: " + item41 + "\n"
+	item42 := doc.Find("#product-attribute-specs-table>tbody>tr>th:contains(Model\\ Number)").Next().Text()
+	result += "Number: " + item42 + "\n"
+	
+	// 5) Short description
+	item5 := doc.Find(".short-description .std").First().Text()
+	result += "Short description: " + item5 + "\n"
+	
+	// 6) The category structure
+	item6 := doc.Find(".breadcrumbs li")
+	cats := []string{}
+	breadcrumb: for _, li := range item6.Nodes{
+		for _, attr := range li.Attr {
+			if attr.Key=="class" && !strings.Contains(attr.Val, "ategor") {
+				continue breadcrumb
+			}
+		}
+		child := li.FirstChild
+		for child.Type != 3 && child.NextSibling != nil {
+			child = child.NextSibling
+		}
+		txt := child.FirstChild 
+		cat := txt.Data
+		cats = append(cats, fmt.Sprintf("%v",cat) )
+	}
+	result += "Categories: " + strings.Join(cats, ", ") + "\n"
+
+	return result
+}
+
+func process(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
-	switch r.Method {
-	case "POST":
-		// Serve the resource.
-	case "GET":
-		// scrap apart data
-		apart, e := newApart(r, c)
+	url := r.FormValue("targetURL")
 
-		if e != nil {
-			http.Error(w, e.Error(), http.StatusInternalServerError)
-		}
-
-		// add apart to datastore
-		key := datastore.NewKey(c, "Apart", apart.Name, 0, nil)
-		_, e = datastore.Put(c, key, &apart)
-		if e != nil {
-			http.Error(w, e.Error(), http.StatusInternalServerError)
-		}
-
-		var test Apart
-
-		if err := datastore.Get(c, key, &test); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		res, e := json.Marshal(test)
-		if e != nil {
-			http.Error(w, e.Error(), http.StatusInternalServerError)
-		}
-
-		fmt.Fprint(w, string(res))
-
-	case "PUT":
-		// Update an existing record.
-	case "DELETE":
-		// Remove the record.
-	default:
-		// Give an error message.
-	}
-}
-
-func newApart(r *http.Request, c appengine.Context) (Apart, error) {
-
-	values := r.URL.Query()
-	id := values.Get("apart_id")
-
-	emptyApart := Apart{[]byte{}, []byte{}, "", ""}
-
-	if id == "" {
-		return emptyApart, errors.New("Must provide an apart_id parameter")
+	resp, err := urlfetch.Client(c).Get(url)
+	if err != nil {
+		c.Errorf("%v", err)
+		return
 	}
 
-	data, e := scrapApartData(id, c)
-	if e != nil {
-		c.Errorf("%v", e)
-		return emptyApart, e
+	doc, err := goquery.NewDocumentFromResponse(resp)
+	if err != nil {
+		c.Errorf("%v", err)
+		return
 	}
 
-	if len(data) == 0 {
-		return emptyApart, errors.New("No data was found for " + id)
-	}
-
-	return Apart{
-		Reserved: []byte(data[0]),
-		Data:     []byte(data[2]),
-		UnitId:   getUnitId(data[2]),
-		Name:     id,
-	}, nil
-}
-
-const HOMELIDAYS_APART_URL = "http://www.homelidays.com/hebergement/p"
-
-func getUnitId(encodedData string) string {
-	var data map[string]interface{}
-
-	if err := json.Unmarshal([]byte(encodedData), &data); err != nil {
-		panic(err)
-	}
-
-	return data["unitId"].(string)
-}
-
-func scrapApartData(id string, c appengine.Context) ([]string, error) {
-	var resp *http.Response
-	var doc *goquery.Document
-	var e error
-
-	url := HOMELIDAYS_APART_URL + id
-
-	if resp, e = urlfetch.Client(c).Get(url); e != nil {
-		c.Errorf("%v", e)
-		return nil, e
-	}
-
-	if doc, e = goquery.NewDocumentFromResponse(resp); e != nil {
-		c.Errorf("%v", e)
-		return nil, e
-	}
-
-	// Parse first body script text
-	data := doc.Find("body > script").First().Text()
-	jsondata := regexp.MustCompile("{\".*}}")
-
-	return jsondata.FindAllString(data, 3), nil
+	result := extractFrom(doc)
+	w.Write([]byte(result))
 }
